@@ -1,0 +1,7 @@
+--Virtual Raphael Pre-trained--
+
+This contains the saved model and the 'reportClassifier_pretrained', run the script this will prompt you to select the new report you wish to
+classify. Please make sure this is on the path.
+There will then be two outputs, a text file that gives the accuracy metrics from when the model was trained, and another text file that
+contains the human factors the model has identified within the uploaded report. Please note these are replaced each time the script is run,
+so save elsewhere or rename before running again. 
