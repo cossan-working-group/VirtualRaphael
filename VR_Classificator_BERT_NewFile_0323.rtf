@@ -1,0 +1,37 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2513
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 # Load BERT tokenizer and model\
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')\
+model_dict = torch.load('model.pt', map_location=device)\
+models = \{\}\
+for col in factors_df.columns[1:]:\
+    model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=3)\
+    model.load_state_dict(model_dict[col])\
+    model.eval()\
+    model.to(device)\
+    models[col] = model\
+\
+# Load new PDF file and extract sections\
+filename = 'new_report.pdf'\
+pdf_file = open(os.path.join('Reports', filename), 'rb')\
+sections = extract_sections(pdf_file)\
+\
+# Classify sections for each factor using pre-trained BERT models\
+for col in factors_df.columns[1:]:\
+    factor_values = []\
+    for section in sections:\
+        inputs = preprocess_text(section)\
+        inputs = \{k: v.to(device) for k, v in inputs.items()\}\
+        outputs = models[col](**inputs)\
+        _, predicted = torch.max(outputs.logits, 1)\
+        predicted = predicted.detach().cpu().numpy()[0]\
+        factor_values.append(predicted)\
+    factor_value_counts = np.bincount(factor_values)\
+    predicted_factor_value = np.argmax(factor_value_counts)\
+    print(f'\{col\}: \{predicted_factor_value\}')\
+}
