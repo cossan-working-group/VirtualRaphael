@@ -5,7 +5,7 @@ import re
 startTargetWords = ["recommendation", "lessons learned", "advice to planning authorities"]
 
 # Define keywords for sentence extraction
-keywords = ["he", "she", "they", "I", "user", "operator", "manager", "management", "team", "lead", "leader", "inspector", "mechanic", "engineer", "driver", "pilot", "crew", "worker", "contractor", "operative"]
+keywords = ["he", "she", "they", "I", "user", "operator", "manager", "management", "team", "lead", "leader", "inspector", "mechanic", "engineer", "driver", "pilot", "crew", "worker", "contractor", "operative","copilot","co-pilot","captain",]
 
 # Function to extract text from a PDF file
 def extract_text_from_pdf(pdf_file, start_page, end_page):
@@ -44,7 +44,7 @@ def extract_lines_and_sentences(text):
     return output_lines
 
 # Path to your PDF file
-pdf_file_path = "example.pdf"
+pdf_file_path = "example.Paris.pdf"
 
 # Specify the starting and ending pages - skip contents, glossary, etc.
 start_page = ##
@@ -62,51 +62,46 @@ with open("Extracted.txt", "w") as output_file:
 
 print("Extraction and saving complete.")
 
+!pip install transformers
+from transformers import BartTokenizer, BartForConditionalGeneration
+import os
+import textwrap
 
+# Load the BART tokenizer and model
+tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")
 
+# Read the input text file
+input_file = "Extracted.txt"
+with open(input_file, "r", encoding="utf-8") as file:
+    input_text = file.read()
 
-import transformers
+# Split the text into sections of 1000 words
+section_length = 1000
+sections = textwrap.wrap(input_text, section_length)
 
-# Define BART summarizer
-tokenizer = transformers.BartTokenizer.from_pretrained("facebook/bart-large-cnn")
-model = transformers.BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")
+# Initialize variables
+output_text = ""
+remaining_sections = sections.copy()
 
-# Function to summarize text using BART
-def summarize_text(text):
-    inputs = tokenizer.encode(text, return_tensors="pt", max_length=1024, truncation=True)
-    summary_ids = model.generate(inputs, max_length=200, min_length=5, length_penalty=2.0, num_beams=4, early_stopping=True)
+# Summarize sections and combine them until the output is less than 1500 words
+while len(output_text.split()) < 1500 and remaining_sections:
+    # Get the next section
+    current_section = remaining_sections.pop(0)
+
+    # Summarize the section to a maximum of 200 tokens
+    max_summary_length = 200
+    inputs = tokenizer.encode("summarize: " + current_section, return_tensors="pt", max_length=1024, truncation=True)
+    summary_ids = model.generate(inputs, max_length=max_summary_length, min_length=30, length_penalty=2.0, num_beams=4, early_stopping=True)
     summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
-    return summary
 
-# Function to process and summarize long text
-def process_long_text(long_text):
-    # Split the long text into manageable sections (e.g., 5000 characters per section)
-    section_length = 5000
-    text_sections = [long_text[i:i + section_length] for i in range(0, len(long_text), section_length)]
+    # Add the summarized section to the output
+    output_text += summary + "\n"
 
-    # Initialize a list to store summaries
-    summaries = []
+# Save the summarized text as a text file
+output_file = "summarized_output.txt"
+with open(output_file, "w", encoding="utf-8") as file:
+    file.write(output_text)
 
-    # Process and summarize each section
-    for section in text_sections:
-        summary = summarize_text(section)
-        summaries.append(summary)
+print("Summarization complete. Output saved to", output_file)
 
-    # Combine the summaries into one
-    combined_summary = "\n".join(summaries)
-
-    return combined_summary
-
-# Load the extracted text
-with open("Extracted.txt", "r") as text_file:
-    extracted_text = text_file.read()
-
-# Check if the extracted text is too long
-if len(extracted_text) > 1024:
-    summary = process_long_text(extracted_text)
-else:
-    summary = summarize_text(extracted_text)
-
-# Save the summary to a text file
-with open("summary.txt", "w") as summary_file:
-    summary_file.write(summary)
