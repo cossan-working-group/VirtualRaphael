@@ -1,57 +1,66 @@
-import fitz
+import fitz  # PyMuPDF
 import re
 
-# Define start and end target words
+# Define start target words
 startTargetWords = ["recommendation", "lessons learned", "advice to planning authorities"]
-endTargetWords = ["reference", "appendix", "annex", "list of", "conclusion", "bibliography", "works cited", "introduction", "board member statements", "executive summary", "abbreviations and acronyms"]
 
 # Define keywords for sentence extraction
 keywords = ["he", "she", "they", "I", "user", "operator", "manager", "management", "team", "lead", "leader", "inspector", "mechanic", "engineer", "driver", "pilot", "crew", "worker", "contractor", "operative"]
 
-# Function to extract relevant sections of text and full sentences containing keywords
-def extract_text_and_sentences(pdf_path, output_file):
-    # Open PDF file
-    doc = fitz.open(pdf_path)
+# Function to extract text from a PDF file
+def extract_text_from_pdf(pdf_file, start_page, end_page):
+    doc = fitz.open(pdf_file)
+    text = ""
+    if end_page is None:
+        end_page = len(doc)  # Set end_page to the number of pages in the document
+    for page_num in range(start_page, end_page):  
+        page = doc[page_num]
+        text += page.get_text()
+    return text
 
-    # Initialize variables to store relevant text and sentences
-    relevant_text = []
-    relevant_sentences = []
+# Function to extract 20 lines following start target words and full sentences containing keywords
+def extract_lines_and_sentences(text):
+    output_lines = []
+    found_target_word = False
+    sentences = re.split(r'(?<=[.!?])\s+', text)  # Split text into sentences
 
-    # Loop through pages in PDF
-    for page in doc:
-        # Extract text from page
-        text = page.get_text()
+    for sentence in sentences:
+        # Check if sentence contains any of the keywords
+        if any(keyword in sentence.lower() for keyword in keywords):
+            output_lines.append(sentence.strip())
 
-        # Check for start and end target words
-        for startTargetWord in startTargetWords:
-            for endTargetWord in endTargetWords:
-                start_index = text.lower().find(startTargetWord.lower())
-                end_index = text.lower().find(endTargetWord.lower(), start_index)
-                if start_index != -1 and end_index != -1:
-                    # Add relevant text to the relevant_text list
-                    relevant_text.append(text[start_index:end_index])
+        # Check if sentence contains any of the start target words
+        if any(word in sentence.lower() for word in startTargetWords):
+            found_target_word = True
 
-        # Split text into sentences
-        sentences = re.split(r'(?<=[.!?])\s+', text)
+        # Extract the 40 lines following the start target words
+        if found_target_word:
+            output_lines.append(sentence.strip())
 
-        # Loop through sentences and find those containing keywords
-        for sentence in sentences:
-            if any(keyword.lower() in sentence.lower() for keyword in keywords):
-                # Add sentences to the relevant_sentences list
-                relevant_sentences.append(sentence)
+            # Break after 40 lines
+            if len(output_lines) >= 40:
+                break
 
-    # Close PDF file
-    doc.close()
+    return output_lines
 
-    # Write relevant text and sentences to the output file
-    with open(output_file, "w") as file:
-        file.write("\n\n".join(relevant_text))
-        file.write("\n\n".join(relevant_sentences))
+# Path to your PDF file
+pdf_file_path = "example.pdf"
 
-# Example usage
-pdf_path = "example.pdf"  # Replace with the path to your PDF file
-output_file = "extracted_text.txt"  # Name of the output text file
-extract_text_and_sentences(pdf_path, output_file)
+# Specify the starting and ending pages - skip contents, glossary, etc.
+start_page = ##
+end_page = None  # Set to None to process until the end of the document
+
+# Extract text from the PDF
+pdf_text = extract_text_from_pdf(pdf_file_path, start_page, end_page)
+
+# Extract lines and sentences
+output_lines = extract_lines_and_sentences(pdf_text)
+
+# Save the extracted lines and sentences to a new text file
+with open("Extracted.txt", "w") as output_file:
+    output_file.write("\n".join(output_lines))
+
+print("Extraction and saving complete.")
 
 
 
@@ -89,7 +98,7 @@ def process_long_text(long_text):
     return combined_summary
 
 # Load the extracted text
-with open("extracted_text.txt", "r") as text_file:
+with open("Extracted.txt", "r") as text_file:
     extracted_text = text_file.read()
 
 # Check if the extracted text is too long
