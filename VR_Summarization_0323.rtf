@@ -1,76 +1,95 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2513
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww10800\viewh8400\viewkind0
-\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+import fitz
+import re
 
-\f0\fs24 \cf0 import fitz\
-import re\
-import transformers\
-\
-# Define start and end target words\
-startTargetWords = ["recommendation", "lessons learned", "advice to planning authorities"]\
-endTargetWords = ["reference", "appendix", "annex", "list of", "conclusion", "bibliography", "works cited", "introduction", "board member statements", "executive summary", "abbreviations and acronyms"]\
-\
-# Define keywords for sentence extraction\
-keywords = ["he", "she", "they", "I", "user", "operator", "manager", "management", "team", "lead", "leader", "inspector", "mechanic", "engineer", "driver", "pilot", "crew", "worker", "contractor", "operative"]\
-\
-# Define BART summarizer\
-tokenizer = transformers.BartTokenizer.from_pretrained("facebook/bart-large-cnn")\
-model = transformers.BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")\
-\
-# Define function to extract relevant sections of text and sentences containing keywords\
-def extract_text_and_sentences(pdf_path):\
-    # Open PDF file\
-    doc = fitz.open(pdf_path)\
-\
-    # Initialize lists to store relevant text and sentences\
-    relevant_text = []\
-    relevant_sentences = []\
-\
-    # Loop through pages in PDF\
-    for page in doc:\
-        # Extract text from page\
-        text = page.getText()\
-\
-        # Loop through start target words and find their indices\
-        for startTargetWord in startTargetWords:\
-            start_index = text.lower().find(startTargetWord.lower())\
-            if start_index != -1:\
-                # Loop through end target words and find their indices\
-                for endTargetWord in endTargetWords:\
-                    end_index = text.lower().find(endTargetWord.lower(), start_index)\
-                    if end_index != -1:\
-                        # Add relevant text to list\
-                        relevant_text.append(text[start_index:end_index])\
-                        break\
-\
-        # Loop through sentences in text and find those containing keywords\
-        for sentence in re.findall(r'\\b(?:%s)\\b(?:\\W+(?:\\b\\w+\\b\\W+)\{0,10\})\{0,3\}\\W+(?:\\b\\w+\\b\\W+)\{0,10\}(?:%s)\\b' % ('|'.join(keywords), '|'.join(keywords)), text, re.IGNORECASE):\
-            relevant_sentences.append(sentence)\
-\
-    # Close PDF file\
-    doc.close()\
-\
-    # Write relevant text to file\
-    with open("relevant_text.txt", "w") as file:\
-        file.write("\\n\\n".join(relevant_text))\
-\
-    # Return relevant sentences\
-    return relevant_sentences\
-\
-# Define function to summarize text using BART\
-def summarize_text(text):\
-    inputs = tokenizer.encode(text, return_tensors="pt", max_length=1024, truncation=True)\
-    summary_ids = model.generate(inputs, max_length=100, min_length=5, length_penalty=2.0, num_beams=4, early_stopping=True)\
-    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)\
-    return summary\
-\
-# Example usage\
-pdf_path = "example.pdf"\
-relevant_sentences = extract_text_and_sentences(pdf_path)\
-relevant_text = "\\n\\n".join(relevant_sentences)\
-summary = summarize_text(relevant_text)\
-print(summary)\
-}
+# Define start and end target words
+startTargetWords = ["recommendation", "lessons learned", "advice to planning authorities"]
+endTargetWords = ["reference", "appendix", "annex", "list of", "conclusion", "bibliography", "works cited", "introduction", "board member statements", "executive summary", "abbreviations and acronyms"]
+
+# Define keywords for sentence extraction
+keywords = ["he", "she", "they", "I", "user", "operator", "manager", "management", "team", "lead", "leader", "inspector", "mechanic", "engineer", "driver", "pilot", "crew", "worker", "contractor", "operative"]
+
+# Function to extract relevant sections of text and sentences containing keywords
+def extract_text_and_sentences(pdf_path, output_file):
+    # Open PDF file
+    doc = fitz.open(pdf_path)
+
+    # Initialize a variable to store the extracted text
+    extracted_text = ""
+
+    # Loop through pages in PDF
+    for page in doc:
+        # Extract text from page
+        text = page.get_text()
+
+        # Check for start and end target words
+        for startTargetWord in startTargetWords:
+            for endTargetWord in endTargetWords:
+                start_index = text.lower().find(startTargetWord.lower())
+                end_index = text.lower().find(endTargetWord.lower(), start_index)
+                if start_index != -1 and end_index != -1:
+                    # Add relevant text to the extracted text
+                    extracted_text += text[start_index:end_index]
+
+        # Loop through sentences in text and find those containing keywords
+        for sentence in re.findall(r'\b(?:%s)\b' % '|'.join(keywords), text, re.IGNORECASE):
+            # Add sentences to the extracted text
+            extracted_text += sentence + "\n"
+
+    # Close PDF file
+    doc.close()
+
+    # Write the extracted text to the output file
+    with open(output_file, "w") as file:
+        file.write(extracted_text)
+
+# Example usage
+pdf_path = "AF447.2009.Rio.Paris.pdf"  # Replace with the path to your PDF file
+output_file = "extracted_text.txt"  # Name of the output text file
+extract_text_and_sentences(pdf_path, output_file)
+
+
+import transformers
+
+# Define BART summarizer
+tokenizer = transformers.BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+model = transformers.BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")
+
+# Function to summarize text using BART
+def summarize_text(text):
+    inputs = tokenizer.encode(text, return_tensors="pt", max_length=1024, truncation=True)
+    summary_ids = model.generate(inputs, max_length=200, min_length=5, length_penalty=2.0, num_beams=4, early_stopping=True)
+    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+    return summary
+
+# Function to process and summarize long text
+def process_long_text(long_text):
+    # Split the long text into manageable sections (e.g., 5000 characters per section)
+    section_length = 5000
+    text_sections = [long_text[i:i + section_length] for i in range(0, len(long_text), section_length)]
+
+    # Initialize a list to store summaries
+    summaries = []
+
+    # Process and summarize each section
+    for section in text_sections:
+        summary = summarize_text(section)
+        summaries.append(summary)
+
+    # Combine the summaries into one
+    combined_summary = "\n".join(summaries)
+
+    return combined_summary
+
+# Load the extracted text
+with open("extracted_text.txt", "r") as text_file:
+    extracted_text = text_file.read()
+
+# Check if the extracted text is too long
+if len(extracted_text) > 1024:
+    summary = process_long_text(extracted_text)
+else:
+    summary = summarize_text(extracted_text)
+
+# Save the summary to a text file
+with open("summary.txt", "w") as summary_file:
+    summary_file.write(summary)
