@@ -13,8 +13,9 @@ def extract_text_and_sentences(pdf_path, output_file):
     # Open PDF file
     doc = fitz.open(pdf_path)
 
-    # Initialize a variable to store the extracted text
-    extracted_text = ""
+    # Initialize variables to store relevant text and sentences
+    relevant_text = []
+    relevant_sentences = []
 
     # Loop through pages in PDF
     for page in doc:
@@ -27,25 +28,27 @@ def extract_text_and_sentences(pdf_path, output_file):
                 start_index = text.lower().find(startTargetWord.lower())
                 end_index = text.lower().find(endTargetWord.lower(), start_index)
                 if start_index != -1 and end_index != -1:
-                    # Add relevant text to the extracted text
-                    extracted_text += text[start_index:end_index]
+                    # Add relevant text to the relevant_text list
+                    relevant_text.append(text[start_index:end_index])
 
         # Loop through sentences in text and find those containing keywords
         for sentence in re.findall(r'\b(?:%s)\b' % '|'.join(keywords), text, re.IGNORECASE):
-            # Add sentences to the extracted text
-            extracted_text += sentence + "\n"
+            # Add sentences to the relevant_sentences list
+            relevant_sentences.append(sentence)
 
     # Close PDF file
     doc.close()
 
-    # Write the extracted text to the output file
+    # Write relevant text and sentences to the output file
     with open(output_file, "w") as file:
-        file.write(extracted_text)
+        file.write("\n\n".join(relevant_text))
+        file.write("\n\n".join(relevant_sentences))
 
 # Example usage
-pdf_path = "AF447.2009.Rio.Paris.pdf"  # Replace with the path to your PDF file
+pdf_path = "example.pdf"  # Replace with the path to your PDF file
 output_file = "extracted_text.txt"  # Name of the output text file
 extract_text_and_sentences(pdf_path, output_file)
+
 
 
 import transformers
