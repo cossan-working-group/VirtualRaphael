@@ -49,7 +49,7 @@ sympy==1.12
 tokenizers==0.15.0
 torch==2.1.1
 tqdm==4.66.1
-transformers==4.35.2
+transformers==4.36.2
 typing_extensions==4.8.0
 urllib3==2.1.0
 # Editable install with no version control (virtual-raphael==0.1.0)
