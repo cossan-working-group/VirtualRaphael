@@ -1,12 +1,14 @@
 Virtual Raphael
 ==============================
 
-Human error classifier based on MATA-D and Machine Learning algorithm.
+Human error classifier based on MATA-D and Machine Learning algorithm. `Virtual Raphael` is a web interface that presents the virtual human factor expert classifier. It has been developed with the aim to enhance the capability of learning from accidents from different industrial sectors, which could prevent similar accidents to happen.
+
+Reading an accident report is a time-consuming process, which delays the learning from accidents. For this reason, a study has been conducted to automate this process by training the computer on a predefined classification scheme. The virtual classifier should support human experts to analyse accidents reports for organizational, technological and individual facters that may trigger human errors.
 
 ## *highlights*
 
 - [x] Based on the Google BERT model;
-
+- [x] Multi-language support for reading reports.
 
 
 ## web application
